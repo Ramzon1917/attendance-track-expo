@@ -27,10 +27,80 @@ export default function ExportPage() {
   const handleExport = () => {
     setLoading(true);
 
-    // Simulate export process
+    // Generate mock data for the report
+    const generateMockData = () => {
+      const data = [];
+      const startDate = new Date();
+
+      // Adjust date based on selected range
+      switch (dateRange) {
+        case "Today":
+          break;
+        case "This Week":
+          startDate.setDate(startDate.getDate() - 7);
+          break;
+        case "This Month":
+          startDate.setDate(1);
+          break;
+        case "Last Month":
+          startDate.setMonth(startDate.getMonth() - 1);
+          startDate.setDate(1);
+          break;
+        case "Custom":
+          startDate.setDate(startDate.getDate() - 30); // Default to last 30 days
+          break;
+      }
+
+      // Generate random entries
+      const days =
+        dateRange === "Today"
+          ? 1
+          : dateRange === "This Week"
+            ? 7
+            : dateRange === "This Month" || dateRange === "Last Month"
+              ? 30
+              : 30;
+
+      for (let i = 0; i < days; i++) {
+        const date = new Date(startDate);
+        date.setDate(date.getDate() + i);
+
+        // Skip weekends for more realistic data
+        const day = date.getDay();
+        if (day === 0 || day === 6) continue;
+
+        const timeIn = `${8 + Math.floor(Math.random() * 2)}:${Math.floor(
+          Math.random() * 60,
+        )
+          .toString()
+          .padStart(2, "0")} AM`;
+        const timeOut = `${4 + Math.floor(Math.random() * 4)}:${Math.floor(
+          Math.random() * 60,
+        )
+          .toString()
+          .padStart(2, "0")} PM`;
+
+        data.push({
+          date: date.toLocaleDateString(),
+          timeIn,
+          timeOut,
+          location: "Office Headquarters",
+          status: "Present",
+        });
+      }
+
+      return data;
+    };
+
+    // Simulate processing and file creation
     setTimeout(() => {
+      const reportData = generateMockData();
+      const reportName = `Attendance_Report_${dateRange.replace(/\s/g, "_")}_${new Date().toISOString().split("T")[0]}.${format.toLowerCase()}`;
+
       setLoading(false);
-      alert(`Report exported as ${format} for ${dateRange}`);
+      alert(
+        `Report "${reportName}" with ${reportData.length} entries has been generated and downloaded as ${format} format.\n\nIn a real app, this would trigger an actual file download in the selected format.`,
+      );
     }, 2000);
   };
 

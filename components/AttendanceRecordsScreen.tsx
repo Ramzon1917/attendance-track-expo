@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { View, Text, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
 import { FileSpreadsheet } from "lucide-react-native";
@@ -11,14 +11,25 @@ interface AttendanceRecordsScreenProps {
 }
 
 const AttendanceRecordsScreen = ({
-  isLoading = false,
+  isLoading: initialLoading = false,
 }: AttendanceRecordsScreenProps) => {
   const router = useRouter();
+  const [isLoading, setIsLoading] = useState(initialLoading);
   const [filters, setFilters] = useState({
     dateRange: "This Week",
     status: "All",
     location: "All Locations",
   });
+
+  // Simulate loading when filters change
+  useEffect(() => {
+    setIsLoading(true);
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [filters]);
 
   const handleFilterChange = (newFilters: {
     dateRange: string;
@@ -33,6 +44,7 @@ const AttendanceRecordsScreen = ({
   const handleExport = () => {
     // In a real app, you would generate and download an export file
     console.log("Export data with filters:", filters);
+    router.push("/export");
   };
 
   const handleRecordPress = (record: any) => {
@@ -66,6 +78,7 @@ const AttendanceRecordsScreen = ({
           <AttendanceList
             isLoading={isLoading}
             onRecordPress={handleRecordPress}
+            filters={filters}
           />
         </View>
       </View>

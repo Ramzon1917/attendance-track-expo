@@ -65,6 +65,9 @@ const Dashboard = ({
             isCheckedIn={isCheckedIn}
             lastCheckInTime={lastCheckInTime}
             lastCheckInLocation={lastCheckInLocation}
+            currentLocation="123 Main Street, Downtown, City, 12345"
+            locationLoading={false}
+            currentTime={new Date().toLocaleTimeString()}
             onTimeIn={onTimeIn}
             onTimeOut={onTimeOut}
           />

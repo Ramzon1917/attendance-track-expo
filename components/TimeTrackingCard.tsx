@@ -1,27 +1,29 @@
 import React from "react";
-import { View, Text, TouchableOpacity } from "react-native";
+import { View, Text, TouchableOpacity, ActivityIndicator } from "react-native";
 import { Clock, MapPin } from "lucide-react-native";
 
 interface TimeTrackingCardProps {
   isCheckedIn?: boolean;
   lastCheckInTime?: string;
   lastCheckInLocation?: string;
+  currentLocation?: string;
+  locationLoading?: boolean;
+  currentTime?: string;
   onTimeIn?: () => void;
   onTimeOut?: () => void;
 }
 
 const TimeTrackingCard = ({
   isCheckedIn = false,
-  lastCheckInTime = "08:30 AM",
-  lastCheckInLocation = "Office Headquarters",
+  lastCheckInTime = "",
+  lastCheckInLocation = "",
+  currentLocation = "123 Main Street, Downtown, City, 12345",
+  locationLoading = false,
+  currentTime = "",
   onTimeIn = () => {},
   onTimeOut = () => {},
 }: TimeTrackingCardProps) => {
-  const currentTime = new Date().toLocaleTimeString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-
+  // Get current date formatted
   const currentDate = new Date().toLocaleDateString("en-US", {
     weekday: "long",
     year: "numeric",
@@ -66,6 +68,27 @@ const TimeTrackingCard = ({
             <View className="flex-row items-center mt-1">
               <MapPin size={16} color="#6b7280" className="mr-1" />
               <Text className="text-gray-800">{lastCheckInLocation}</Text>
+            </View>
+          </View>
+        )}
+      </View>
+
+      {/* Current Location Section */}
+      <View className="bg-gray-50 p-4 rounded-lg mb-4">
+        <Text className="text-gray-600 mb-2">Current Location</Text>
+        {locationLoading ? (
+          <View className="flex-row items-center">
+            <ActivityIndicator size="small" color="#4f46e5" />
+            <Text className="text-gray-500 ml-2">Detecting location...</Text>
+          </View>
+        ) : (
+          <View className="flex-row items-start">
+            <MapPin size={16} color="#4f46e5" style={{ marginTop: 2 }} />
+            <View className="ml-2 flex-1">
+              <Text className="text-gray-800">{currentLocation}</Text>
+              <Text className="text-xs text-gray-500 mt-1">
+                Location verified for attendance tracking
+              </Text>
             </View>
           </View>
         )}
