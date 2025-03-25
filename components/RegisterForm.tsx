@@ -14,13 +14,13 @@ interface RegisterFormProps {
     name: string;
     email: string;
     password: string;
-  }) => void;
+  }) => Promise<void>;
   isLoading?: boolean;
   error?: string | null;
 }
 
 const RegisterForm = ({
-  onRegister = () => {},
+  onRegister = async () => {},
   isLoading = false,
   error = null,
 }: RegisterFormProps) => {
@@ -76,10 +76,18 @@ const RegisterForm = ({
     return isValid;
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (validateForm()) {
-      onRegister({ name, email, password });
+      try {
+        await onRegister({ name, email, password });
+      } catch (error) {
+        // Error is handled in the parent component
+      }
     }
+  };
+
+  const clearError = (field: keyof typeof formErrors) => {
+    setFormErrors((prev) => ({ ...prev, [field]: "" }));
   };
 
   return (
@@ -110,7 +118,10 @@ const RegisterForm = ({
             className="flex-1 ml-2 text-base text-gray-800"
             placeholder="John Doe"
             value={name}
-            onChangeText={setName}
+            onChangeText={(text) => {
+              setName(text);
+              clearError("name");
+            }}
             autoCapitalize="words"
           />
         </View>
@@ -129,7 +140,10 @@ const RegisterForm = ({
             className="flex-1 ml-2 text-base text-gray-800"
             placeholder="your.email@example.com"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={(text) => {
+              setEmail(text);
+              clearError("email");
+            }}
             keyboardType="email-address"
             autoCapitalize="none"
           />
@@ -147,7 +161,11 @@ const RegisterForm = ({
             className="flex-1 ml-2 text-base text-gray-800"
             placeholder="••••••••"
             value={password}
-            onChangeText={setPassword}
+            onChangeText={(text) => {
+              setPassword(text);
+              clearError("password");
+              if (confirmPassword) clearError("confirmPassword");
+            }}
             secureTextEntry={!showPassword}
           />
           <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
@@ -175,7 +193,10 @@ const RegisterForm = ({
             className="flex-1 ml-2 text-base text-gray-800"
             placeholder="••••••••"
             value={confirmPassword}
-            onChangeText={setConfirmPassword}
+            onChangeText={(text) => {
+              setConfirmPassword(text);
+              clearError("confirmPassword");
+            }}
             secureTextEntry={!showConfirmPassword}
           />
           <TouchableOpacity

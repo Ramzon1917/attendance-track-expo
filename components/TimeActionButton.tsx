@@ -7,6 +7,7 @@ interface TimeActionButtonProps {
   onPress?: () => void;
   isLoading?: boolean;
   disabled?: boolean;
+  fullWidth?: boolean;
 }
 
 const TimeActionButton = ({
@@ -14,10 +15,11 @@ const TimeActionButton = ({
   onPress = () => {},
   isLoading = false,
   disabled = false,
+  fullWidth = true,
 }: TimeActionButtonProps) => {
   return (
     <TouchableOpacity
-      className={`py-3 px-6 rounded-lg flex-row justify-center items-center ${disabled ? "opacity-50" : "opacity-100"} ${isCheckedIn ? "bg-red-600" : "bg-green-600"}`}
+      className={`py-3 ${fullWidth ? "w-full" : "px-6"} rounded-lg flex-row justify-center items-center ${disabled ? "opacity-50" : "opacity-100"} ${isCheckedIn ? "bg-red-600" : "bg-green-600"}`}
       onPress={onPress}
       disabled={disabled || isLoading}
     >

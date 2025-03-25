@@ -10,13 +10,13 @@ import {
 import { Eye, EyeOff, Mail, Lock } from "lucide-react-native";
 
 interface LoginFormProps {
-  onLogin?: (email: string, password: string) => void;
+  onLogin?: (email: string, password: string) => Promise<void>;
   onForgotPassword?: () => void;
   isLoading?: boolean;
 }
 
 const LoginForm = ({
-  onLogin = (email, password) => {
+  onLogin = async (email, password) => {
     console.log("Login attempted with:", email, password);
     Alert.alert("Login", "Login functionality not implemented yet");
   },
@@ -31,17 +31,37 @@ const LoginForm = ({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [errors, setErrors] = useState({ email: "", password: "" });
 
-  const handleLogin = () => {
+  const validateForm = () => {
+    let isValid = true;
+    const newErrors = { email: "", password: "" };
+
     if (!email.trim()) {
-      Alert.alert("Error", "Please enter your email");
-      return;
+      newErrors.email = "Email is required";
+      isValid = false;
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      newErrors.email = "Email is invalid";
+      isValid = false;
     }
+
     if (!password.trim()) {
-      Alert.alert("Error", "Please enter your password");
-      return;
+      newErrors.password = "Password is required";
+      isValid = false;
     }
-    onLogin(email, password);
+
+    setErrors(newErrors);
+    return isValid;
+  };
+
+  const handleLogin = async () => {
+    if (validateForm()) {
+      try {
+        await onLogin(email, password);
+      } catch (error) {
+        // Error is handled in the parent component
+      }
+    }
   };
 
   return (
@@ -58,14 +78,20 @@ const LoginForm = ({
             <Mail size={20} color="#6B7280" />
           </View>
           <TextInput
-            className="w-full bg-gray-50 border border-gray-300 text-gray-900 rounded-lg p-2.5 pl-10"
+            className={`w-full bg-gray-50 border ${errors.email ? "border-red-500" : "border-gray-300"} text-gray-900 rounded-lg p-2.5 pl-10`}
             placeholder="your.email@example.com"
             keyboardType="email-address"
             autoCapitalize="none"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={(text) => {
+              setEmail(text);
+              if (errors.email) setErrors({ ...errors, email: "" });
+            }}
           />
         </View>
+        {errors.email ? (
+          <Text className="text-red-500 text-xs mt-1">{errors.email}</Text>
+        ) : null}
       </View>
 
       {/* Password Input */}
@@ -76,11 +102,14 @@ const LoginForm = ({
             <Lock size={20} color="#6B7280" />
           </View>
           <TextInput
-            className="w-full bg-gray-50 border border-gray-300 text-gray-900 rounded-lg p-2.5 pl-10 pr-10"
+            className={`w-full bg-gray-50 border ${errors.password ? "border-red-500" : "border-gray-300"} text-gray-900 rounded-lg p-2.5 pl-10 pr-10`}
             placeholder="••••••••"
             secureTextEntry={!showPassword}
             value={password}
-            onChangeText={setPassword}
+            onChangeText={(text) => {
+              setPassword(text);
+              if (errors.password) setErrors({ ...errors, password: "" });
+            }}
           />
           <TouchableOpacity
             className="absolute right-3 top-3"
@@ -93,6 +122,9 @@ const LoginForm = ({
             )}
           </TouchableOpacity>
         </View>
+        {errors.password ? (
+          <Text className="text-red-500 text-xs mt-1">{errors.password}</Text>
+        ) : null}
       </View>
 
       {/* Forgot Password Link */}

@@ -1,6 +1,7 @@
 import React from "react";
-import { View, Text, TouchableOpacity, ActivityIndicator } from "react-native";
+import { View, Text, ActivityIndicator } from "react-native";
 import { Clock, MapPin } from "lucide-react-native";
+import TimeActionButton from "./TimeActionButton";
 
 interface TimeTrackingCardProps {
   isCheckedIn?: boolean;
@@ -22,6 +23,7 @@ const TimeTrackingCard = ({
   currentTime = "",
   onTimeIn = () => {},
   onTimeOut = () => {},
+  isLoading = false,
 }: TimeTrackingCardProps) => {
   // Get current date formatted
   const currentDate = new Date().toLocaleDateString("en-US", {
@@ -94,15 +96,11 @@ const TimeTrackingCard = ({
         )}
       </View>
 
-      <TouchableOpacity
-        className={`w-full py-3 rounded-lg flex-row justify-center items-center ${isCheckedIn ? "bg-red-600" : "bg-green-600"}`}
+      <TimeActionButton
+        isCheckedIn={isCheckedIn}
         onPress={isCheckedIn ? onTimeOut : onTimeIn}
-      >
-        <Clock size={20} color="#ffffff" />
-        <Text className="text-white font-semibold ml-2">
-          {isCheckedIn ? "Time Out" : "Time In"}
-        </Text>
-      </TouchableOpacity>
+        isLoading={isLoading}
+      />
     </View>
   );
 };

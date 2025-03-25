@@ -1,93 +1,125 @@
 import React, { useState, useEffect } from "react";
-import { View } from "react-native";
+import { View, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
 import Dashboard from "../components/Dashboard";
 import AuthScreen from "../components/AuthScreen";
+import {
+  getCurrentUser,
+  loginUser,
+  registerUser,
+  getIncompleteAttendanceRecord,
+  User,
+} from "../utils/localStorage";
 
 export default function HomeScreen() {
   const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isCheckedIn, setIsCheckedIn] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Mock users for demo purposes
-  const mockUsers = [
-    {
-      id: 1,
-      name: "John Doe",
-      email: "john@example.com",
-      password: "password123",
-    },
-    {
-      id: 2,
-      name: "Jane Smith",
-      email: "jane@example.com",
-      password: "password123",
-    },
-    {
-      id: 3,
-      name: "Alex Johnson",
-      email: "alex@example.com",
-      password: "password123",
-    },
-  ];
-
-  const [currentUser, setCurrentUser] = useState(mockUsers[0]);
-
-  // Simulate checking login status
+  // Check login status on app load
   useEffect(() => {
-    // For demo purposes, we'll set the user as logged in
-    const checkLoginStatus = setTimeout(() => {
-      setIsLoggedIn(true);
-    }, 500);
+    const checkLoginStatus = async () => {
+      try {
+        const user = await getCurrentUser();
+        if (user) {
+          setCurrentUser(user);
+          setIsLoggedIn(true);
 
-    return () => clearTimeout(checkLoginStatus);
+          // Check if user has an incomplete attendance record
+          const incompleteRecord = await getIncompleteAttendanceRecord(user.id);
+          setIsCheckedIn(!!incompleteRecord);
+        }
+      } catch (error) {
+        console.error("Error checking login status:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkLoginStatus();
   }, []);
 
-  const handleLogin = (email: string, password: string) => {
-    console.log("Login with:", email, password);
-    // Find user with matching credentials
-    const user = mockUsers.find(
-      (u) => u.email === email && u.password === password,
-    );
-    if (user) {
+  const handleLogin = async (email: string, password: string) => {
+    try {
+      setIsLoading(true);
+      const user = await loginUser(email, password);
       setCurrentUser(user);
       setIsLoggedIn(true);
-    } else {
-      // For demo, always log in with the first user if credentials don't match
-      setCurrentUser(mockUsers[0]);
-      setIsLoggedIn(true);
+
+      // Check if user has an incomplete attendance record
+      const incompleteRecord = await getIncompleteAttendanceRecord(user.id);
+      setIsCheckedIn(!!incompleteRecord);
+    } catch (error) {
+      console.error("Login error:", error);
+      throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleRegister = (data: {
+  const handleRegister = async (data: {
     name: string;
     email: string;
     password: string;
   }) => {
-    console.log("Register with:", data);
-    // Create a new mock user with the provided data
-    const newUser = {
-      id: mockUsers.length + 1,
-      ...data,
-    };
-    // For demo purposes, we'll just set the current user
-    setCurrentUser(newUser);
-    setIsLoggedIn(true);
+    try {
+      setIsLoading(true);
+      const newUser = await registerUser(data);
+      setCurrentUser(newUser);
+      setIsLoggedIn(true);
+    } catch (error) {
+      console.error("Registration error:", error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleTimeIn = () => {
-    setIsCheckedIn(true);
+  const handleTimeIn = async () => {
+    try {
+      if (!currentUser) return;
+
+      // Create attendance record
+      await createAttendanceRecord(currentUser.id, "Current Location");
+      setIsCheckedIn(true);
+    } catch (error) {
+      console.error("Error handling time in:", error);
+    }
   };
 
-  const handleTimeOut = () => {
-    setIsCheckedIn(false);
+  const handleTimeOut = async () => {
+    try {
+      if (!currentUser) return;
+
+      // Find and complete the active attendance record
+      const incompleteRecord = await getIncompleteAttendanceRecord(
+        currentUser.id,
+      );
+      if (incompleteRecord) {
+        await completeAttendanceRecord(incompleteRecord.id, "Current Location");
+      }
+      setIsCheckedIn(false);
+    } catch (error) {
+      console.error("Error handling time out:", error);
+    }
   };
+
+  if (isLoading) {
+    return (
+      <View className="flex-1 justify-center items-center bg-gray-100">
+        <ActivityIndicator size="large" color="#4f46e5" />
+      </View>
+    );
+  }
 
   return (
     <View className="flex-1">
-      {isLoggedIn ? (
+      {isLoggedIn && currentUser ? (
         <Dashboard
           userName={currentUser.name}
+          userId={currentUser.id}
           isCheckedIn={isCheckedIn}
           onTimeIn={handleTimeIn}
           onTimeOut={handleTimeOut}

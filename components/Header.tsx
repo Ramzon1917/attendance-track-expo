@@ -1,6 +1,13 @@
 import React from "react";
 import { View, Text, TouchableOpacity } from "react-native";
-import { Home, Bell, User, ChevronRight } from "lucide-react-native";
+import {
+  Home,
+  Bell,
+  User,
+  ChevronRight,
+  ArrowLeft,
+  Menu,
+} from "lucide-react-native";
 import { useRouter } from "expo-router";
 
 interface HeaderProps {
@@ -35,7 +42,11 @@ const Header = ({
             onPress={onMenuPress}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Home size={24} color="#4f46e5" />
+            {title === "TimeTrack" ? (
+              <Menu size={24} color="#4f46e5" />
+            ) : (
+              <ArrowLeft size={24} color="#4f46e5" />
+            )}
           </TouchableOpacity>
         )}
         <View className="flex-row items-center">
