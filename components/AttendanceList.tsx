@@ -226,14 +226,7 @@ const AttendanceList = ({
               </View>
             </View>
 
-            <View className="mt-4 flex-row justify-between">
-              <View className="flex-row">
-                <View className="flex-row items-center">
-                  <Text className="text-gray-500 text-sm">
-                    Select for bulk actions
-                  </Text>
-                </View>
-              </View>
+            <View className="mt-4 flex-row justify-end">
               <TouchableOpacity
                 className="rounded-md bg-cyan-700 px-4 py-2"
                 onPress={() => handleViewDetails(item)}
@@ -372,19 +365,6 @@ const AttendanceList = ({
                         : "Incomplete attendance record. Time out information is missing."}
                     </Text>
                   </View>
-                </View>
-
-                <View className="mb-6 flex-row justify-between">
-                  <TouchableOpacity
-                    className="rounded-md bg-blue-600 px-4 py-3 flex-row items-center"
-                    onPress={() => {
-                      setDetailsModalVisible(false);
-                    }}
-                  >
-                    <Text className="text-white ml-2 font-medium">
-                      Close Details
-                    </Text>
-                  </TouchableOpacity>
                 </View>
               </ScrollView>
             )}
