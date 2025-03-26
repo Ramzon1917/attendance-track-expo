@@ -12,7 +12,6 @@ import { useRouter } from "expo-router";
 import * as Location from "expo-location";
 import Header from "./Header";
 import TimeTrackingCard from "./TimeTrackingCard";
-import TimeActionButton from "./TimeActionButton";
 import {
   getCurrentUser,
   createAttendanceRecord,
@@ -20,16 +19,35 @@ import {
   completeAttendanceRecord,
 } from "../utils/localStorage";
 
+/**
+ * Props for the TimeTrackingScreen component
+ */
 interface TimeTrackingScreenProps {
+  /** Initial check-in state */
   isCheckedIn?: boolean;
+  /** User ID for attendance tracking */
   userId?: number;
 }
 
+/**
+ * Time format options for consistent time display
+ */
+const TIME_FORMAT_OPTIONS = {
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+} as const;
+
+/**
+ * TimeTrackingScreen component for handling time tracking functionality
+ */
 const TimeTrackingScreen = ({
   isCheckedIn: initialIsCheckedIn = false,
   userId = 0,
 }: TimeTrackingScreenProps) => {
   const router = useRouter();
+
+  // State management
   const [loading, setLoading] = useState(false);
   const [checkedInState, setCheckedInState] = useState(initialIsCheckedIn);
   const [locationLoading, setLocationLoading] = useState(true);
@@ -45,20 +63,20 @@ const TimeTrackingScreen = ({
   const [currentRecordId, setCurrentRecordId] = useState<string | null>(null);
   const [initialLoading, setInitialLoading] = useState(true);
 
-  const locationInterval = useRef<NodeJS.Timeout | null>(null);
+  // Refs for interval cleanup
   const timeInterval = useRef<NodeJS.Timeout | null>(null);
 
-  // Get current time in 12-hour format
-  const getCurrentTime = () => {
+  /**
+   * Get current time in 12-hour format
+   */
+  const getCurrentTimeString = () => {
     const now = new Date();
-    return now.toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    });
+    return now.toLocaleTimeString("en-US", TIME_FORMAT_OPTIONS);
   };
 
-  // Load initial attendance state
+  /**
+   * Load initial attendance state from storage
+   */
   useEffect(() => {
     const loadAttendanceState = async () => {
       try {
@@ -76,10 +94,7 @@ const TimeTrackingScreen = ({
           setLastCheckInLocation(incompleteRecord.location);
           setCurrentRecordId(incompleteRecord.id);
         } else {
-          setCheckedInState(false);
-          setLastCheckInTime("");
-          setLastCheckInLocation("");
-          setCurrentRecordId(null);
+          resetAttendanceState();
         }
       } catch (error) {
         console.error("Error loading attendance state:", error);
@@ -91,12 +106,24 @@ const TimeTrackingScreen = ({
     loadAttendanceState();
   }, [router]);
 
-  // Update time every second
+  /**
+   * Reset attendance state values
+   */
+  const resetAttendanceState = () => {
+    setCheckedInState(false);
+    setLastCheckInTime("");
+    setLastCheckInLocation("");
+    setCurrentRecordId(null);
+  };
+
+  /**
+   * Update time every second
+   */
   useEffect(() => {
-    setCurrentTime(getCurrentTime());
+    setCurrentTime(getCurrentTimeString());
 
     timeInterval.current = setInterval(() => {
-      setCurrentTime(getCurrentTime());
+      setCurrentTime(getCurrentTimeString());
     }, 1000);
 
     return () => {
@@ -104,7 +131,61 @@ const TimeTrackingScreen = ({
     };
   }, []);
 
-  // Handle time in action
+  /**
+   * Get and set user's current location
+   */
+  useEffect(() => {
+    const getLocation = async () => {
+      try {
+        setLocationLoading(true);
+        const { status } = await Location.requestForegroundPermissionsAsync();
+
+        if (status !== "granted") {
+          setLocationError("Permission to access location was denied");
+          setLocationLoading(false);
+          return;
+        }
+
+        const location = await Location.getCurrentPositionAsync({});
+        const address = await Location.reverseGeocodeAsync({
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        });
+
+        setCurrentLocation(formatLocationAddress(location, address));
+      } catch (error) {
+        console.error("Error getting location:", error);
+        setLocationError("Failed to get location");
+      } finally {
+        setLocationLoading(false);
+      }
+    };
+
+    getLocation();
+  }, []);
+
+  /**
+   * Format location address from geocoding result
+   */
+  const formatLocationAddress = (
+    location: Location.LocationObject,
+    address: Location.LocationGeocodedAddress[],
+  ) => {
+    if (address && address.length > 0) {
+      const { street, city, region, postalCode } = address[0];
+      const formattedAddress = [street, city, region, postalCode]
+        .filter(Boolean)
+        .join(", ");
+
+      return formattedAddress || "Unknown location";
+    } else {
+      return `${location.coords.latitude.toFixed(6)}, ${location.coords.longitude.toFixed(6)}`;
+    }
+  };
+
+  /**
+   * Handle time in action
+   */
   const handleTimeIn = async () => {
     try {
       setLoading(true);
@@ -126,7 +207,9 @@ const TimeTrackingScreen = ({
     }
   };
 
-  // Handle time out action
+  /**
+   * Handle time out action
+   */
   const handleTimeOut = async () => {
     try {
       if (!currentRecordId) {
@@ -136,8 +219,7 @@ const TimeTrackingScreen = ({
 
       setLoading(true);
       await completeAttendanceRecord(currentRecordId, currentLocation);
-      setCheckedInState(false);
-      setCurrentRecordId(null);
+      resetAttendanceState();
     } catch (error) {
       console.error("Error clocking out:", error);
       Alert.alert("Error", "Failed to clock out. Please try again.");
@@ -147,11 +229,65 @@ const TimeTrackingScreen = ({
     }
   };
 
-  // Prompt for time action confirmation
+  /**
+   * Show confirmation modal for time actions
+   */
   const promptTimeAction = (action: "in" | "out") => {
     setConfirmationAction(action);
     setShowConfirmation(true);
   };
+
+  /**
+   * Render confirmation modal
+   */
+  const renderConfirmationModal = () => (
+    <Modal
+      animationType="fade"
+      transparent={true}
+      visible={showConfirmation}
+      onRequestClose={() => setShowConfirmation(false)}
+    >
+      <View className="flex-1 justify-center items-center bg-black/50">
+        <View className="bg-white rounded-lg p-6 w-4/5 max-w-sm">
+          <Text className="text-lg font-bold text-gray-800 mb-4">
+            {confirmationAction === "in"
+              ? "Clock In Confirmation"
+              : "Clock Out Confirmation"}
+          </Text>
+
+          <Text className="text-gray-600 mb-6">
+            {confirmationAction === "in"
+              ? `Are you sure you want to clock in at ${currentTime} at ${currentLocation}?`
+              : "Are you sure you want to clock out now?"}
+          </Text>
+
+          <View className="flex-row justify-end space-x-3">
+            <TouchableOpacity
+              className="px-4 py-2 rounded-md bg-gray-200"
+              onPress={() => setShowConfirmation(false)}
+            >
+              <Text className="text-gray-800">Cancel</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              className={`px-4 py-2 rounded-md ${confirmationAction === "in" ? "bg-green-600" : "bg-red-600"}`}
+              onPress={() => {
+                if (confirmationAction === "in") {
+                  handleTimeIn();
+                } else {
+                  handleTimeOut();
+                }
+              }}
+            >
+              <Text className="text-white">
+                {confirmationAction === "in" ? "Clock In" : "Clock Out"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
 
   return (
     <View className="flex-1 bg-gray-100">
@@ -177,53 +313,7 @@ const TimeTrackingScreen = ({
         </View>
       </ScrollView>
 
-      {/* Confirmation Modal */}
-      <Modal
-        animationType="fade"
-        transparent={true}
-        visible={showConfirmation}
-        onRequestClose={() => setShowConfirmation(false)}
-      >
-        <View className="flex-1 justify-center items-center bg-black/50">
-          <View className="bg-white rounded-lg p-6 w-4/5 max-w-sm">
-            <Text className="text-lg font-bold text-gray-800 mb-4">
-              {confirmationAction === "in"
-                ? "Clock In Confirmation"
-                : "Clock Out Confirmation"}
-            </Text>
-
-            <Text className="text-gray-600 mb-6">
-              {confirmationAction === "in"
-                ? `Are you sure you want to clock in at ${currentTime} at ${currentLocation}?`
-                : "Are you sure you want to clock out now?"}
-            </Text>
-
-            <View className="flex-row justify-end space-x-3">
-              <TouchableOpacity
-                className="px-4 py-2 rounded-md bg-gray-200"
-                onPress={() => setShowConfirmation(false)}
-              >
-                <Text className="text-gray-800">Cancel</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                className={`px-4 py-2 rounded-md ${confirmationAction === "in" ? "bg-green-600" : "bg-red-600"}`}
-                onPress={() => {
-                  if (confirmationAction === "in") {
-                    handleTimeIn();
-                  } else {
-                    handleTimeOut();
-                  }
-                }}
-              >
-                <Text className="text-white">
-                  {confirmationAction === "in" ? "Clock In" : "Clock Out"}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      {renderConfirmationModal()}
     </View>
   );
 };

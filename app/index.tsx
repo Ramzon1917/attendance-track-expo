@@ -8,17 +8,26 @@ import {
   loginUser,
   registerUser,
   getIncompleteAttendanceRecord,
+  createAttendanceRecord,
+  completeAttendanceRecord,
   User,
 } from "../utils/localStorage";
 
+/**
+ * Main HomeScreen component that handles authentication and renders the appropriate screen
+ */
 export default function HomeScreen() {
   const router = useRouter();
+
+  // State management
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isCheckedIn, setIsCheckedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Check login status on app load
+  /**
+   * Check login status on app load and set initial state
+   */
   useEffect(() => {
     const checkLoginStatus = async () => {
       try {
@@ -26,10 +35,7 @@ export default function HomeScreen() {
         if (user) {
           setCurrentUser(user);
           setIsLoggedIn(true);
-
-          // Check if user has an incomplete attendance record
-          const incompleteRecord = await getIncompleteAttendanceRecord(user.id);
-          setIsCheckedIn(!!incompleteRecord);
+          await checkAttendanceStatus(user.id);
         }
       } catch (error) {
         console.error("Error checking login status:", error);
@@ -41,16 +47,28 @@ export default function HomeScreen() {
     checkLoginStatus();
   }, []);
 
+  /**
+   * Check if user has an incomplete attendance record
+   */
+  const checkAttendanceStatus = async (userId: number) => {
+    try {
+      const incompleteRecord = await getIncompleteAttendanceRecord(userId);
+      setIsCheckedIn(!!incompleteRecord);
+    } catch (error) {
+      console.error("Error checking attendance status:", error);
+    }
+  };
+
+  /**
+   * Handle user login
+   */
   const handleLogin = async (email: string, password: string) => {
     try {
       setIsLoading(true);
       const user = await loginUser(email, password);
       setCurrentUser(user);
       setIsLoggedIn(true);
-
-      // Check if user has an incomplete attendance record
-      const incompleteRecord = await getIncompleteAttendanceRecord(user.id);
-      setIsCheckedIn(!!incompleteRecord);
+      await checkAttendanceStatus(user.id);
     } catch (error) {
       console.error("Login error:", error);
       throw error;
@@ -59,6 +77,9 @@ export default function HomeScreen() {
     }
   };
 
+  /**
+   * Handle user registration
+   */
   const handleRegister = async (data: {
     name: string;
     email: string;
@@ -77,6 +98,9 @@ export default function HomeScreen() {
     }
   };
 
+  /**
+   * Handle time in action from dashboard
+   */
   const handleTimeIn = async () => {
     try {
       if (!currentUser) return;
@@ -89,6 +113,9 @@ export default function HomeScreen() {
     }
   };
 
+  /**
+   * Handle time out action from dashboard
+   */
   const handleTimeOut = async () => {
     try {
       if (!currentUser) return;
@@ -99,13 +126,16 @@ export default function HomeScreen() {
       );
       if (incompleteRecord) {
         await completeAttendanceRecord(incompleteRecord.id, "Current Location");
+        setIsCheckedIn(false);
       }
-      setIsCheckedIn(false);
     } catch (error) {
       console.error("Error handling time out:", error);
     }
   };
 
+  /**
+   * Render loading indicator while checking authentication
+   */
   if (isLoading) {
     return (
       <View className="flex-1 justify-center items-center bg-gray-100">
@@ -114,6 +144,9 @@ export default function HomeScreen() {
     );
   }
 
+  /**
+   * Render Dashboard for authenticated users, otherwise show AuthScreen
+   */
   return (
     <View className="flex-1">
       {isLoggedIn && currentUser ? (
@@ -123,6 +156,7 @@ export default function HomeScreen() {
           isCheckedIn={isCheckedIn}
           onTimeIn={handleTimeIn}
           onTimeOut={handleTimeOut}
+          currentUser={currentUser}
         />
       ) : (
         <AuthScreen onLogin={handleLogin} onRegister={handleRegister} />

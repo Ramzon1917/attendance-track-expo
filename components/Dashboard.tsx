@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import * as Location from "expo-location";
+import { User } from "../utils/localStorage";
 import Header from "./Header";
 import TimeTrackingCard from "./TimeTrackingCard";
 import AttendanceSummary from "./AttendanceSummary";
@@ -22,20 +23,24 @@ import {
 
 interface DashboardProps {
   userName?: string;
+  userId?: number;
   isCheckedIn?: boolean;
   lastCheckInTime?: string;
   lastCheckInLocation?: string;
   onTimeIn?: () => void;
   onTimeOut?: () => void;
+  currentUser?: User | null;
 }
 
 const Dashboard = ({
   userName = "John Doe",
+  userId,
   isCheckedIn = false,
   lastCheckInTime = "08:30 AM",
   lastCheckInLocation = "Office Headquarters",
   onTimeIn = () => {},
   onTimeOut = () => {},
+  currentUser = null,
 }: DashboardProps) => {
   const router = useRouter();
   const [currentTime, setCurrentTime] = useState("");
@@ -225,25 +230,36 @@ const Dashboard = ({
         </View>
 
         <View className="mb-6">
-          <AttendanceSummary />
+          <AttendanceSummary userId={currentUser?.id} period="week" />
         </View>
 
         <View className="mb-6">
           <FeatureNavigation onNavigate={handleNavigate} />
         </View>
 
-        <TouchableOpacity
-          className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 mb-6"
-          onPress={() => router.push("/time-tracking")}
-        >
-          <Text className="text-lg font-semibold text-gray-800 mb-2">
-            Time Tracking
-          </Text>
-          <Text className="text-gray-600">
-            View detailed time tracking history and manage your attendance
-            records
-          </Text>
-        </TouchableOpacity>
+        <View className="flex-row space-x-4 mb-6">
+          <TouchableOpacity
+            className="flex-1 bg-white p-4 rounded-lg shadow-sm border border-gray-100"
+            onPress={() => router.push("/time-tracking")}
+          >
+            <Text className="text-lg font-semibold text-gray-800 mb-2">
+              Time Tracking
+            </Text>
+            <Text className="text-gray-600">
+              View detailed time tracking history
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            className="flex-1 bg-white p-4 rounded-lg shadow-sm border border-gray-100"
+            onPress={() => router.push("/export")}
+          >
+            <Text className="text-lg font-semibold text-gray-800 mb-2">
+              Export Data
+            </Text>
+            <Text className="text-gray-600">Generate and download reports</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
 
       {/* Confirmation Modal */}

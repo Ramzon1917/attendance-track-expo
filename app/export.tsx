@@ -1,13 +1,22 @@
 import React, { useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity } from "react-native";
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+  Share,
+} from "react-native";
 import { useRouter } from "expo-router";
 import {
   FileSpreadsheet,
   Download,
   Calendar,
   Filter,
+  Upload,
 } from "lucide-react-native";
 import Header from "../components/Header";
+import { getAttendanceRecords } from "../utils/localStorage";
 
 export default function ExportPage() {
   const router = useRouter();
@@ -23,6 +32,46 @@ export default function ExportPage() {
     "Custom",
   ];
   const formatOptions = ["Excel", "PDF", "CSV"];
+
+  const handleUploadToDrive = async () => {
+    try {
+      setLoading(true);
+
+      // Get all attendance records
+      const allRecords = await getAttendanceRecords();
+
+      if (allRecords.length === 0) {
+        Alert.alert("No Records", "There are no attendance records to upload.");
+        setLoading(false);
+        return;
+      }
+
+      // Format records for sharing
+      const formattedRecords = allRecords
+        .map((record) => {
+          return `Date: ${record.date}\nTime In: ${record.timeIn}\nTime Out: ${record.timeOut || "Not clocked out"}\nLocation: ${record.location}\nDuration: ${record.duration}\nStatus: ${record.status}\n\n`;
+        })
+        .join("---\n");
+
+      const reportName = `Attendance_Report_${dateRange.replace(/\s/g, "_")}_${new Date().toISOString().split("T")[0]}`;
+
+      // Use Share API as a placeholder for Google Drive integration
+      await Share.share({
+        title: reportName,
+        message: `${reportName}\n\n${formattedRecords}`,
+      });
+
+      Alert.alert(
+        "Upload Placeholder",
+        "In a production app, this would upload to Google Drive. Currently using Share API as a demonstration.",
+      );
+    } catch (error) {
+      console.error("Error uploading to drive:", error);
+      Alert.alert("Error", "Failed to upload records to Google Drive");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleExport = () => {
     setLoading(true);
@@ -167,16 +216,28 @@ export default function ExportPage() {
             </View>
           </View>
 
-          <TouchableOpacity
-            className={`w-full py-3 rounded-lg flex-row justify-center items-center ${loading ? "bg-indigo-400" : "bg-indigo-600"}`}
-            onPress={handleExport}
-            disabled={loading}
-          >
-            <Download size={20} color="#ffffff" />
-            <Text className="text-white font-semibold ml-2">
-              {loading ? "Generating..." : "Generate Report"}
-            </Text>
-          </TouchableOpacity>
+          <View className="space-y-3">
+            <TouchableOpacity
+              className={`w-full py-3 rounded-lg flex-row justify-center items-center ${loading ? "bg-indigo-400" : "bg-indigo-600"}`}
+              onPress={handleExport}
+              disabled={loading}
+            >
+              <Download size={20} color="#ffffff" />
+              <Text className="text-white font-semibold ml-2">
+                {loading ? "Generating..." : "Generate Report"}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              className="w-full py-3 rounded-lg flex-row justify-center items-center bg-green-600"
+              onPress={handleUploadToDrive}
+            >
+              <Upload size={20} color="#ffffff" />
+              <Text className="text-white font-semibold ml-2">
+                Upload to Google Drive
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View className="bg-blue-50 p-4 rounded-lg mb-6">

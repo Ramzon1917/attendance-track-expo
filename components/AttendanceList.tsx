@@ -7,18 +7,15 @@ import {
   ActivityIndicator,
   Modal,
   ScrollView,
+  Alert,
 } from "react-native";
 import { Clock, MapPin, Calendar, ChevronRight, X } from "lucide-react-native";
 
-interface AttendanceRecord {
-  id: string;
-  date: string;
-  timeIn: string;
-  timeOut: string | null;
-  location: string;
-  duration: string;
-  status: "complete" | "incomplete";
-}
+import {
+  AttendanceRecord,
+  getAttendanceRecords,
+  saveAttendanceRecords,
+} from "../utils/localStorage";
 
 interface AttendanceListProps {
   records?: AttendanceRecord[];
@@ -29,13 +26,19 @@ interface AttendanceListProps {
     status: string;
     location: string;
   };
+  onRecordsChange?: (records: AttendanceRecord[]) => void;
+  selectedRecords?: string[];
+  onSelectRecord?: (recordId: string, selected: boolean) => void;
 }
 
 const AttendanceList = ({
-  records = mockAttendanceRecords,
+  records = [],
   isLoading = false,
   onRecordPress = () => {},
   filters = { dateRange: "All", status: "All", location: "All Locations" },
+  onRecordsChange = () => {},
+  selectedRecords = [],
+  onSelectRecord = () => {},
 }: AttendanceListProps) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [detailsModalVisible, setDetailsModalVisible] = useState(false);
@@ -50,6 +53,42 @@ const AttendanceList = ({
   const handleViewDetails = (record: AttendanceRecord) => {
     setSelectedRecord(record);
     setDetailsModalVisible(true);
+  };
+
+  const handleDeleteRecord = async (recordId: string) => {
+    Alert.alert(
+      "Delete Record",
+      "Are you sure you want to delete this attendance record? This action cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              // Get all records
+              const allRecords = await getAttendanceRecords();
+              // Filter out the record to delete
+              const updatedRecords = allRecords.filter(
+                (record) => record.id !== recordId,
+              );
+              // Save the updated records
+              await saveAttendanceRecords(updatedRecords);
+              // Update the local state
+              const updatedLocalRecords = records.filter(
+                (record) => record.id !== recordId,
+              );
+              // Notify parent component about the change
+              onRecordsChange(updatedLocalRecords);
+              Alert.alert("Success", "Record deleted successfully");
+            } catch (error) {
+              console.error("Error deleting record:", error);
+              Alert.alert("Error", "Failed to delete record");
+            }
+          },
+        },
+      ],
+    );
   };
 
   // Filter records based on filters
@@ -119,12 +158,21 @@ const AttendanceList = ({
 
     return (
       <TouchableOpacity
-        className={`mb-3 rounded-lg border border-gray-200 bg-white ${isExpanded ? "shadow-md" : ""}`}
+        className={`mb-3 rounded-lg border border-gray-200 bg-white ${isExpanded ? "shadow-md" : ""} ${selectedRecords.includes(item.id) ? "border-indigo-500 border-2" : ""}`}
         onPress={() => toggleExpand(item.id)}
+        onLongPress={() =>
+          onSelectRecord(item.id, !selectedRecords.includes(item.id))
+        }
         activeOpacity={0.7}
       >
         <View className="flex-row items-center justify-between p-4">
           <View className="flex-row items-center">
+            <TouchableOpacity
+              onPress={() =>
+                onSelectRecord(item.id, !selectedRecords.includes(item.id))
+              }
+              className={`mr-2 w-5 h-5 border rounded ${selectedRecords.includes(item.id) ? "bg-indigo-500 border-indigo-500" : "border-gray-400"}`}
+            />
             <Calendar size={20} color="#0891b2" />
             <Text className="ml-2 font-medium">{item.date}</Text>
           </View>
@@ -178,12 +226,21 @@ const AttendanceList = ({
               </View>
             </View>
 
-            <TouchableOpacity
-              className="mt-4 self-end rounded-md bg-cyan-700 px-4 py-2"
-              onPress={() => handleViewDetails(item)}
-            >
-              <Text className="text-white">View Details</Text>
-            </TouchableOpacity>
+            <View className="mt-4 flex-row justify-between">
+              <View className="flex-row">
+                <View className="flex-row items-center">
+                  <Text className="text-gray-500 text-sm">
+                    Select for bulk actions
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                className="rounded-md bg-cyan-700 px-4 py-2"
+                onPress={() => handleViewDetails(item)}
+              >
+                <Text className="text-white">View Details</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
       </TouchableOpacity>
@@ -316,6 +373,19 @@ const AttendanceList = ({
                     </Text>
                   </View>
                 </View>
+
+                <View className="mb-6 flex-row justify-between">
+                  <TouchableOpacity
+                    className="rounded-md bg-blue-600 px-4 py-3 flex-row items-center"
+                    onPress={() => {
+                      setDetailsModalVisible(false);
+                    }}
+                  >
+                    <Text className="text-white ml-2 font-medium">
+                      Close Details
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </ScrollView>
             )}
           </View>
@@ -324,54 +394,5 @@ const AttendanceList = ({
     </View>
   );
 };
-
-// Mock data for default props
-const mockAttendanceRecords: AttendanceRecord[] = [
-  {
-    id: "1",
-    date: "Today, June 10, 2023",
-    timeIn: "08:30 AM",
-    timeOut: "05:15 PM",
-    location: "123 Business Park, New York, NY",
-    duration: "8h 45m",
-    status: "complete",
-  },
-  {
-    id: "2",
-    date: "Yesterday, June 9, 2023",
-    timeIn: "08:45 AM",
-    timeOut: "05:30 PM",
-    location: "123 Business Park, New York, NY",
-    duration: "8h 45m",
-    status: "complete",
-  },
-  {
-    id: "3",
-    date: "June 8, 2023",
-    timeIn: "09:00 AM",
-    timeOut: null,
-    location: "456 Remote Location, Brooklyn, NY",
-    duration: "N/A",
-    status: "incomplete",
-  },
-  {
-    id: "4",
-    date: "June 7, 2023",
-    timeIn: "08:15 AM",
-    timeOut: "04:45 PM",
-    location: "123 Business Park, New York, NY",
-    duration: "8h 30m",
-    status: "complete",
-  },
-  {
-    id: "5",
-    date: "June 6, 2023",
-    timeIn: "08:30 AM",
-    timeOut: "05:00 PM",
-    location: "123 Business Park, New York, NY",
-    duration: "8h 30m",
-    status: "complete",
-  },
-];
 
 export default AttendanceList;
